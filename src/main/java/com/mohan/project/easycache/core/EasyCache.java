@@ -9,6 +9,13 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * EasyCache核心类，对外提供缓存API
+ * @param <Key> 缓存key
+ * @param <Value> 缓存value
+ * @author mohan
+ * @date 2019-08-01 10:19:12
+ */
 public class EasyCache<Key, Value> implements Cache<Key, Value> {
 
     private Map<Key, Value> cache = new ConcurrentHashMap<>();
@@ -34,15 +41,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     }
 
     @Override
-    public Optional<Value> getIfPresent(Key key) {
-        if(cache.containsKey(key)) {
-            return Optional.of(cache.get(key));
-        }
-        return Optional.empty();
-    }
-
-    @Override
-    public Map<Key, Value> getAllPresent(Iterable<Key> keys) {
+    public Map<Key, Value> getAll(Iterable<Key> keys) {
         Map<Key, Value> result = new HashMap<>();
         for (Key key : keys) {
             if(cache.containsKey(key)) {
@@ -75,7 +74,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     }
 
     @Override
-    public void clearUp() {
+    public synchronized void clearUp() {
         cache.clear();
     }
 
