@@ -1,6 +1,7 @@
 package com.mohan.project.easycache.core;
 
 import com.mohan.project.easycache.exception.GetValueByCallableException;
+import com.mohan.project.easycache.selection.SelctionStrategyEnum;
 import com.mohan.project.easycache.statistic.Statistic;
 
 import java.util.HashMap;
@@ -8,8 +9,33 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class EasyCache<Key, Value> implements Cache<Key, Value> {
+
+    /**
+     * 写入后过期时间
+     */
+    private Long expireAfterWriteTime;
+
+    /**
+     * 写入后过期时间单位
+     */
+    private TimeUnit expireAfterWriteTimeUnit;
+
+    /**
+     * 访问后过期时间
+     */
+    private Long expireAfterAccessTime;
+
+    /**
+     * 访问后过期时间单位
+     */
+    private TimeUnit expireAfterAccessTimeUnit;
+
+    private Long maxSize;
+
+    private SelctionStrategyEnum selctionStrategy = SelctionStrategyEnum.VOLATILE_LRU;
 
     private Map<Key, Value> cache = new ConcurrentHashMap<>();
     private Statistic statistic = new Statistic();
@@ -87,6 +113,86 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     @Override
     public Statistic statistic() {
         return statistic;
+    }
+
+    /**
+     * EasyCache建造者
+     * @param <Key> 缓存key
+     * @param <Value> 缓存value
+     * @author mohan
+     * @date 2018-08-05 22:03:11
+     */
+    public static class EasyCacheBuilder<Key, Value> {
+
+        /**
+         * 写入后过期时间
+         */
+        private Long expireAfterWriteTime;
+
+        /**
+         * 写入后过期时间单位
+         */
+        private TimeUnit expireAfterWriteTimeUnit;
+
+        /**
+         * 访问后过期时间
+         */
+        private Long expireAfterAccessTime;
+
+        /**
+         * 访问后过期时间单位
+         */
+        private TimeUnit expireAfterAccessTimeUnit;
+
+        private Long maxSize;
+
+        private SelctionStrategyEnum selctionStrategy = SelctionStrategyEnum.VOLATILE_LRU;
+
+
+        public static EasyCacheBuilder<Object, Object> builder() {
+            return new EasyCacheBuilder<Object, Object>();
+        }
+
+        public EasyCacheBuilder<Key, Value> expireAfterWriteTime(Long expireAfterWriteTime) {
+            this.expireAfterWriteTime = expireAfterWriteTime;
+            return this;
+        }
+
+        public EasyCacheBuilder<Key, Value> expireAfterWriteTimeUnit(TimeUnit expireAfterWriteTimeUnit) {
+            this.expireAfterWriteTimeUnit = expireAfterWriteTimeUnit;
+            return this;
+        }
+
+        public EasyCacheBuilder<Key, Value> expireAfterAccessTime(Long expireAfterAccessTime) {
+            this.expireAfterAccessTime = expireAfterAccessTime;
+            return this;
+        }
+
+        public EasyCacheBuilder<Key, Value> expireAfterAccessTimeUnit(TimeUnit expireAfterAccessTimeUnit) {
+            this.expireAfterAccessTimeUnit = expireAfterAccessTimeUnit;
+            return this;
+        }
+
+        public EasyCacheBuilder<Key, Value> maxSize(Long maxSize) {
+            this.maxSize = maxSize;
+            return this;
+        }
+
+        public EasyCacheBuilder selctionStrategy(SelctionStrategyEnum selctionStrategy) {
+            this.selctionStrategy = selctionStrategy;
+            return this;
+        }
+
+        public <SubKey extends Key, SubValue extends Value> EasyCache<SubKey, SubValue> build() {
+            EasyCache<SubKey, SubValue> easyCache = new EasyCache<>();
+            easyCache.expireAfterWriteTime = this.expireAfterWriteTime;
+            easyCache.expireAfterWriteTimeUnit = this.expireAfterWriteTimeUnit;
+            easyCache.expireAfterAccessTime = this.expireAfterAccessTime;
+            easyCache.expireAfterAccessTimeUnit = this.expireAfterAccessTimeUnit;
+            easyCache.maxSize = this.maxSize;
+            easyCache.selctionStrategy = this.selctionStrategy;
+            return easyCache;
+        }
     }
 }
 
