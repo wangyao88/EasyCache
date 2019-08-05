@@ -4,14 +4,24 @@ import com.mohan.project.easycache.exception.GetValueByCallableException;
 import com.mohan.project.easycache.selection.SelctionStrategyEnum;
 import com.mohan.project.easycache.statistic.Statistic;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * EasyCache核心类
+ * @param <Key> 缓存key
+ * @param <Value> 缓存value
+ * @author mohan
+ * @date 2018-08-05 22:43:38
+ */
 public class EasyCache<Key, Value> implements Cache<Key, Value> {
+
+    /**
+     * EasyCache唯一ID
+     */
+    private String id;
 
     /**
      * 写入后过期时间
@@ -33,12 +43,22 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
      */
     private TimeUnit expireAfterAccessTimeUnit;
 
+    /**
+     * 缓存中最大元素数量
+     */
     private Long maxSize;
 
+    /**
+     * 数据淘汰策略
+     */
     private SelctionStrategyEnum selctionStrategy = SelctionStrategyEnum.VOLATILE_LRU;
 
+    /**
+     * 缓存数据统计信息
+     */
+    private Statistic<Key> statistic;
+
     private Map<Key, Value> cache = new ConcurrentHashMap<>();
-    private Statistic statistic = new Statistic();
 
     @Override
     public Optional<Value> get(Key key) {
@@ -115,6 +135,38 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
         return statistic;
     }
 
+    public String getId() {
+        return id;
+    }
+
+    public Long getExpireAfterWriteTime() {
+        return expireAfterWriteTime;
+    }
+
+    public TimeUnit getExpireAfterWriteTimeUnit() {
+        return expireAfterWriteTimeUnit;
+    }
+
+    public Long getExpireAfterAccessTime() {
+        return expireAfterAccessTime;
+    }
+
+    public TimeUnit getExpireAfterAccessTimeUnit() {
+        return expireAfterAccessTimeUnit;
+    }
+
+    public Long getMaxSize() {
+        return maxSize;
+    }
+
+    public SelctionStrategyEnum getSelctionStrategy() {
+        return selctionStrategy;
+    }
+
+    public Statistic<Key> getStatistic() {
+        return statistic;
+    }
+
     /**
      * EasyCache建造者
      * @param <Key> 缓存key
@@ -132,7 +184,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
         /**
          * 写入后过期时间单位
          */
-        private TimeUnit expireAfterWriteTimeUnit;
+        private TimeUnit expireAfterWriteTimeUnit = TimeUnit.SECONDS;
 
         /**
          * 访问后过期时间
@@ -142,14 +194,19 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
         /**
          * 访问后过期时间单位
          */
-        private TimeUnit expireAfterAccessTimeUnit;
+        private TimeUnit expireAfterAccessTimeUnit = TimeUnit.SECONDS;
 
+        /**
+         * 缓存中最大元素数量
+         */
         private Long maxSize;
 
+        /**
+         * 数据淘汰策略
+         */
         private SelctionStrategyEnum selctionStrategy = SelctionStrategyEnum.VOLATILE_LRU;
 
-
-        public static EasyCacheBuilder<Object, Object> builder() {
+        public static EasyCacheBuilder<Object, Object> newBuilder() {
             return new EasyCacheBuilder<Object, Object>();
         }
 
@@ -186,11 +243,15 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
         public <SubKey extends Key, SubValue extends Value> EasyCache<SubKey, SubValue> build() {
             EasyCache<SubKey, SubValue> easyCache = new EasyCache<>();
             easyCache.expireAfterWriteTime = this.expireAfterWriteTime;
-            easyCache.expireAfterWriteTimeUnit = this.expireAfterWriteTimeUnit;
+            easyCache.expireAfterWriteTimeUnit = Objects.isNull(this.expireAfterWriteTimeUnit) ? TimeUnit.SECONDS : this.expireAfterWriteTimeUnit;
             easyCache.expireAfterAccessTime = this.expireAfterAccessTime;
-            easyCache.expireAfterAccessTimeUnit = this.expireAfterAccessTimeUnit;
+            easyCache.expireAfterAccessTimeUnit = Objects.isNull(this.expireAfterAccessTimeUnit) ? TimeUnit.SECONDS : this.expireAfterAccessTimeUnit;
             easyCache.maxSize = this.maxSize;
             easyCache.selctionStrategy = this.selctionStrategy;
+            Statistic<SubKey> statistic = new Statistic<>(Objects.isNull(easyCache.expireAfterWriteTime), Objects.isNull(easyCache.expireAfterAccessTime));
+            easyCache.statistic = statistic;
+            easyCache.id = UUID.randomUUID().toString();
+            EasyCacheServer.getInstance().server(easyCache);
             return easyCache;
         }
     }
