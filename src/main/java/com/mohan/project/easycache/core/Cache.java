@@ -26,12 +26,19 @@ public interface Cache<Key, Value> {
     /**
      * 获取缓存中key对应的value, 如果不包含此key，则调用callable获取value
      * 抵用成功后，将value发放入缓存，同事返回该value
-     * @param key 存key
+     * @param key 缓存key
      * @param callable 获取value的线程
      * @return key对应的value
      * @throws GetValueByCallableException 调用callable失败的异常
      */
-    Optional<Value> get(Key key, Callable<? extends Value> callable) throws GetValueByCallableException;;
+    Optional<Value> get(Key key, Callable<? extends Value> callable) throws GetValueByCallableException;
+
+    /**
+     * 获取缓存中key对应的value
+     * @param key 缓存key
+     * @return 缓存中key对应的value
+     */
+    Optional<Value> getIfPresent(Key key);
 
     /**
      * 批量获取缓存中keys对应的value集合

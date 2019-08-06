@@ -2,7 +2,13 @@ package com.mohan.project.easycache.core;
 
 import com.mohan.project.easycache.statistic.Statistic;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -18,13 +24,12 @@ import java.util.concurrent.TimeUnit;
  */
 public class EasyCacheServer<Key, Value> {
 
-    private Map<String, EasyCache<Key, Value>> easyCacheMap = new ConcurrentHashMap<>();
+    private Map<SeverKey, EasyCache<Key, Value>> easyCacheMap = new ConcurrentHashMap<>();
     private static ScheduledExecutorService THREAD_POOL_EXECUTOR = null;
 
     private EasyCacheServer() {
         THREAD_POOL_EXECUTOR = Executors.newScheduledThreadPool(10);
-        THREAD_POOL_EXECUTOR.scheduleAtFixedRate(this::doExpireAfterWrite, 0, 1, TimeUnit.SECONDS);
-        THREAD_POOL_EXECUTOR.scheduleAtFixedRate(this::doExpireAfterAccess, 0, 1, TimeUnit.SECONDS);
+        THREAD_POOL_EXECUTOR.scheduleAtFixedRate(this::doExpire, 0, 1, TimeUnit.SECONDS);
         THREAD_POOL_EXECUTOR.scheduleAtFixedRate(this::doSelection, 0, 1, TimeUnit.SECONDS);
     }
 
@@ -36,18 +41,109 @@ public class EasyCacheServer<Key, Value> {
         return Singleton.EASY_CACHE_SERVER;
     }
 
-    public void server(EasyCache<Key, Value> easyCache) {
-        easyCacheMap.put(easyCache.getId(), easyCache);
+    private static class SeverKey {
+        private String key;
+        private Boolean enableExpireAfterWrite;
+        private Boolean enableExpireAfterAccess;
+
+        public SeverKey(String key, Boolean enableExpireAfterWrite, Boolean enableExpireAfterAccess) {
+            this.key = key;
+            this.enableExpireAfterWrite = enableExpireAfterWrite;
+            this.enableExpireAfterAccess = enableExpireAfterAccess;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public void setKey(String key) {
+            this.key = key;
+        }
+
+        public Boolean getEnableExpireAfterWrite() {
+            return enableExpireAfterWrite;
+        }
+
+        public void setEnableExpireAfterWrite(Boolean enableExpireAfterWrite) {
+            this.enableExpireAfterWrite = enableExpireAfterWrite;
+        }
+
+        public Boolean getEnableExpireAfterAccess() {
+            return enableExpireAfterAccess;
+        }
+
+        public void setEnableExpireAfterAccess(Boolean enableExpireAfterAccess) {
+            this.enableExpireAfterAccess = enableExpireAfterAccess;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if(this == o) {
+                return true;
+            }
+            if(o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            SeverKey severKey = (SeverKey) o;
+            return Objects.equals(key, severKey.key) &&
+                    Objects.equals(enableExpireAfterWrite, severKey.enableExpireAfterWrite) &&
+                    Objects.equals(enableExpireAfterAccess, severKey.enableExpireAfterAccess);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(key, enableExpireAfterWrite, enableExpireAfterAccess);
+        }
     }
 
-    private void doExpireAfterWrite() {
-        easyCacheMap.forEach((id, easyCache) -> {
-            Statistic<Key> statistic = easyCache.getStatistic();
+    public void server(EasyCache<Key, Value> easyCache) {
+        Statistic<Key> statistic = easyCache.getStatistic();
+        SeverKey severKey = new SeverKey(easyCache.getId(), statistic.getEnableExpireAfterWrite(), statistic.getEnableExpireAfterAccess());
+        easyCacheMap.put(severKey, easyCache);
+    }
+
+    private void doExpire() {
+        easyCacheMap.forEach((severKey, easyCache) -> {
+            if(severKey.getEnableExpireAfterWrite()) {
+                doExpireAfterWrite(easyCache);
+            }
+            if(severKey.getEnableExpireAfterAccess()) {
+                doExpireAfterAccess(easyCache);
+            }
         });
     }
 
-    private void doExpireAfterAccess() {
+    private void doExpireAfterWrite(EasyCache<Key, Value> easyCache) {
+        Statistic<Key> statistic = easyCache.getStatistic();
+        Map<Key, Statistic.ExpireRecorder> expireRecorderMap = statistic.getExpireRecorderMap();
+        Long expireAfterWriteTime = easyCache.getExpireAfterWriteTime();
+        ChronoUnit expireAfterWriteChronoUnit = easyCache.getExpireAfterWriteChronoUnit();
+        doExpire(easyCache, expireRecorderMap, expireAfterWriteTime, expireAfterWriteChronoUnit);
+    }
 
+    private void doExpireAfterAccess(EasyCache<Key, Value> easyCache) {
+        Statistic<Key> statistic = easyCache.getStatistic();
+        Map<Key, Statistic.ExpireRecorder> expireRecorderMap = statistic.getExpireRecorderMap();
+        Long expireAfterAccessTime = easyCache.getExpireAfterAccessTime();
+        ChronoUnit expireAfterAccessChronoUnit = easyCache.getExpireAfterAccessChronoUnit();
+        doExpire(easyCache, expireRecorderMap, expireAfterAccessTime, expireAfterAccessChronoUnit);
+    }
+
+    private void doExpire(EasyCache<Key, Value> easyCache, Map<Key, Statistic.ExpireRecorder> expireRecorderMap, Long expireTime, ChronoUnit expireChronoUnit) {
+        Set<Key> keys = expireRecorderMap.keySet();
+        for (Key key : keys) {
+            Statistic.ExpireRecorder expireRecorder = expireRecorderMap.get(key);
+            Long writeTime = expireRecorder.getWriteTime();
+            if(isExpired(writeTime, expireTime, expireChronoUnit)) {
+                easyCache.invalidate(key);
+            }
+        }
+    }
+
+    private boolean isExpired(Long writeTime, Long expireTime, ChronoUnit expireChronoUnit) {
+        LocalDateTime writeLocalDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(writeTime), ZoneId.systemDefault());
+        LocalDateTime checkDateTime = writeLocalDateTime.plus(expireTime, expireChronoUnit);
+        return checkDateTime.isBefore(LocalDateTime.now());
     }
 
     private void doSelection() {
