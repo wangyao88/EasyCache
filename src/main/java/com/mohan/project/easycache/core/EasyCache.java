@@ -1,6 +1,7 @@
 package com.mohan.project.easycache.core;
 
 import com.mohan.project.easycache.exception.GetValueByCallableException;
+import com.mohan.project.easycache.exception.ReachingMaxSizeException;
 import com.mohan.project.easycache.selection.SelctionStrategyEnum;
 import com.mohan.project.easycache.statistic.Statistic;
 
@@ -109,12 +110,18 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
 
     @Override
     public void put(Key key, Value value) {
+        if(size() > getMaxSize()) {
+            throw new ReachingMaxSizeException();
+        }
         cache.put(key, value);
         statistic.doWrite(key);
     }
 
     @Override
     public void putAll(Map<? extends Key, ? extends Value> map) {
+        if(size() > getMaxSize()) {
+            throw new ReachingMaxSizeException();
+        }
         map.forEach((k, v) -> {
             cache.put(k, v);
             statistic.doWrite(k);
@@ -262,7 +269,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
             easyCache.expireAfterWriteChronoUnit = Objects.isNull(this.expireAfterWriteChronoUnit) ? ChronoUnit.SECONDS : this.expireAfterWriteChronoUnit;
             easyCache.expireAfterAccessTime = this.expireAfterAccessTime;
             easyCache.expireAfterAccessChronoUnit = Objects.isNull(this.expireAfterAccessChronoUnit) ? ChronoUnit.SECONDS : this.expireAfterAccessChronoUnit;
-            easyCache.maxSize = this.maxSize;
+            easyCache.maxSize = Objects.isNull(this.maxSize) ? Integer.MAX_VALUE : this.maxSize;
             easyCache.selctionStrategy = this.selctionStrategy;
             Statistic<SubKey> statistic = new Statistic<>(Objects.isNull(easyCache.expireAfterWriteTime), Objects.isNull(easyCache.expireAfterAccessTime));
             easyCache.statistic = statistic;

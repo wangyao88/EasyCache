@@ -1,5 +1,7 @@
 package com.mohan.project.easycache.core;
 
+import com.mohan.project.easycache.selection.SelctionStrategyEnum;
+import com.mohan.project.easycache.selection.SelctionStrategyManager;
 import com.mohan.project.easycache.statistic.Statistic;
 
 import java.time.Instant;
@@ -29,7 +31,7 @@ public class EasyCacheServer<Key, Value> {
 
     private EasyCacheServer() {
         THREAD_POOL_EXECUTOR = Executors.newScheduledThreadPool(10);
-        THREAD_POOL_EXECUTOR.scheduleAtFixedRate(this::doExpire, 0, 1, TimeUnit.SECONDS);
+        THREAD_POOL_EXECUTOR.scheduleAtFixedRate(this::process, 0, 1, TimeUnit.SECONDS);
         THREAD_POOL_EXECUTOR.scheduleAtFixedRate(this::doSelection, 0, 1, TimeUnit.SECONDS);
     }
 
@@ -102,7 +104,7 @@ public class EasyCacheServer<Key, Value> {
         easyCacheMap.put(severKey, easyCache);
     }
 
-    private void doExpire() {
+    private void process() {
         easyCacheMap.forEach((severKey, easyCache) -> {
             if(severKey.getEnableExpireAfterWrite()) {
                 doExpireAfterWrite(easyCache);
@@ -147,7 +149,11 @@ public class EasyCacheServer<Key, Value> {
     }
 
     private void doSelection() {
-
+        easyCacheMap.forEach((severKey, easyCache) -> {
+            if(easyCache.size() >= easyCache.getMaxSize()) {
+                SelctionStrategyManager.doSelection(easyCache);
+            }
+        });
     }
 
 }
