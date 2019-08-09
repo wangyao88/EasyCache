@@ -4,6 +4,8 @@ import com.mohan.project.easycache.core.EasyCache;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * 缓存数据淘汰实现类
@@ -15,7 +17,7 @@ import java.time.format.DateTimeFormatter;
 public class NoEnvictionSelctionyHandler extends SelctionStrategyHandler{
 
     @Override
-    protected <Key, Value> void doHandle(long selectionNum, EasyCache<Key, Value> easyCache) {
+    protected <Key, Value> List<Key> doHandle(long selectionNum, EasyCache<Key, Value> easyCache) {
         String format = DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.now());
         StringBuilder info = new StringBuilder();
         info.append(format)
@@ -26,5 +28,6 @@ public class NoEnvictionSelctionyHandler extends SelctionStrategyHandler{
             .append(SelctionStrategyEnum.NO_ENVICTION.name())
             .append(", 无法进行数据淘汰！请手动删除数据！");
         System.out.println(info.toString());
+        return Collections.emptyList();
     }
 }

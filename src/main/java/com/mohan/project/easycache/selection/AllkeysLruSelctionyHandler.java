@@ -1,6 +1,13 @@
 package com.mohan.project.easycache.selection;
 
 import com.mohan.project.easycache.core.EasyCache;
+import com.mohan.project.easycache.statistic.Statistic;
+
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 缓存数据淘汰实现类
@@ -12,7 +19,13 @@ import com.mohan.project.easycache.core.EasyCache;
 public class AllkeysLruSelctionyHandler extends SelctionStrategyHandler{
 
     @Override
-    protected <Key, Value> void doHandle(long selectionNum, EasyCache<Key, Value> easyCache) {
-
+    protected <Key, Value> List<Key> doHandle(long selectionNum, EasyCache<Key, Value> easyCache) {
+        Map<Key, Statistic.Counter<Key>> allKeysCounter = easyCache.getStatistic().getAllKeysCounter();
+        Collection<Statistic.Counter<Key>> counters = allKeysCounter.values();
+        return counters.stream()
+                       .sorted(Comparator.comparing(Statistic.Counter<Key>::getAccessTime).thenComparingInt(Statistic.Counter::getCount))
+                       .limit(selectionNum)
+                       .map(Statistic.Counter::getKey)
+                       .collect(Collectors.toList());
     }
 }

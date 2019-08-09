@@ -19,15 +19,13 @@ import java.util.stream.Collectors;
 public class VolatileTtlSelctionyHandler extends SelctionStrategyHandler{
 
     @Override
-    protected <Key, Value> void doHandle(long selectionNum, EasyCache<Key, Value> easyCache) {
+    protected <Key, Value> List<Key> doHandle(long selectionNum, EasyCache<Key, Value> easyCache) {
         Map<Key, Statistic.ExpireRecorder<Key> > expireRecorderMap = easyCache.getStatistic().getExpireRecorderMap();
         Collection<Statistic.ExpireRecorder<Key>> expireRecorders = expireRecorderMap.values();
-        List<Key> needSelectedKeys =
-                expireRecorders.stream()
-                               .sorted(Comparator.comparing(Statistic.ExpireRecorder::getEearliestTime))
-                               .limit(selectionNum)
-                               .map(Statistic.ExpireRecorder::getKey)
-                               .collect(Collectors.toList());
-        easyCache.invalidateAll(needSelectedKeys);
+        return expireRecorders.stream()
+                              .sorted(Comparator.comparing(Statistic.ExpireRecorder::getEearliestTime))
+                              .limit(selectionNum)
+                              .map(Statistic.ExpireRecorder::getKey)
+                              .collect(Collectors.toList());
     }
 }

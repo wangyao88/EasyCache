@@ -15,6 +15,7 @@ public class Statistic<Key> {
     private Boolean enableExpireAfterWrite;
     private Boolean enableExpireAfterAccess;
     private Map<Key, ExpireRecorder<Key>> expireRecorderMap = new ConcurrentHashMap<>();
+    private Map<Key, Counter<Key>> allKeysUsedCounter = new ConcurrentHashMap<>();
 
 
     public Statistic(boolean enableExpireAfterWrite, boolean enableExpireAfterAccess) {
@@ -23,6 +24,16 @@ public class Statistic<Key> {
     }
 
     public void doGet(Key key, boolean present) {
+        if(present) {
+            if(allKeysUsedCounter.containsKey(key)) {
+                Counter<Key> counter = allKeysUsedCounter.get(key);
+                counter.setAccessTime(System.currentTimeMillis());
+                counter.increateCount();
+            }else {
+                allKeysUsedCounter.put(key, new Counter<>(key, System.currentTimeMillis(), 1));
+            }
+
+        }
         if(present && enableExpireAfterAccess) {
             long now = System.currentTimeMillis();
             if(expireRecorderMap.containsKey(key)) {
@@ -40,6 +51,7 @@ public class Statistic<Key> {
     }
 
     public void doWrite(Key key) {
+        allKeysUsedCounter.put(key, new Counter<>(key, System.currentTimeMillis(), 1));
         if(enableExpireAfterWrite) {
             long now = System.currentTimeMillis();
             if(expireRecorderMap.containsKey(key)) {
@@ -75,6 +87,10 @@ public class Statistic<Key> {
 
     public Map<Key, ExpireRecorder<Key>> getExpireRecorderMap() {
         return expireRecorderMap;
+    }
+
+    public Map<Key, Counter<Key>> getAllKeysCounter() {
+        return allKeysUsedCounter;
     }
 
     public Boolean getEnableExpireAfterWrite() {
@@ -163,6 +179,64 @@ public class Statistic<Key> {
         @Override
         public int hashCode() {
             return key.hashCode();
+        }
+    }
+
+    public static class Counter<Key> {
+
+        private Key key;
+        private Long accessTime;
+        private int count;
+
+        public Counter(Key key, Long accessTime, int count) {
+            this.key = key;
+            this.accessTime = accessTime;
+            this.count = count;
+        }
+
+        public Key getKey() {
+            return key;
+        }
+
+        public void setKey(Key key) {
+            this.key = key;
+        }
+
+        public Long getAccessTime() {
+            return accessTime;
+        }
+
+        public void setAccessTime(Long accessTime) {
+            this.accessTime = accessTime;
+        }
+
+        public int getCount() {
+            return count;
+        }
+
+        public void setCount(int count) {
+            this.count = count;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if(this == o) {
+                return true;
+            }
+            if(o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            Counter<?> counter = (Counter<?>) o;
+            return key.equals(counter.key);
+        }
+
+        @Override
+        public int hashCode() {
+            return key.hashCode();
+        }
+
+        public void increateCount() {
+            setCount(getCount()+1);
         }
     }
 }

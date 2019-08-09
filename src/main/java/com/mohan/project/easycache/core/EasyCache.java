@@ -62,7 +62,11 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
      */
     private Statistic<Key> statistic;
 
-    private Map<Key, Value> cache = new ConcurrentHashMap<>();
+    private Map<Key, Value> cache;
+
+    private EasyCache() {
+        cache = new ConcurrentHashMap<>();
+    }
 
     @Override
     public Optional<Value> get(Key key) {
@@ -75,7 +79,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     public Optional<Value> get(Key key, Callable<? extends Value> callable) throws GetValueByCallableException {
         if(cache.containsKey(key)) {
             Optional<Value> valueOptional = Optional.of(cache.get(key));
-            statistic.doGet(key, valueOptional.isPresent());
+            statistic.doGet(key, true);
             return valueOptional;
         }
         try {
@@ -93,7 +97,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     public Optional<Value> getIfPresent(Key key) {
         if(cache.containsKey(key)) {
             Optional<Value> valueOptional = Optional.of(cache.get(key));
-            statistic.doGet(key, valueOptional.isPresent());
+            statistic.doGet(key, true);
             return valueOptional;
         }
         return Optional.empty();
@@ -278,8 +282,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
             easyCache.expireAfterAccessChronoUnit = Objects.isNull(this.expireAfterAccessChronoUnit) ? ChronoUnit.SECONDS : this.expireAfterAccessChronoUnit;
             easyCache.maxSize = Objects.isNull(this.maxSize) ? Integer.MAX_VALUE : this.maxSize;
             easyCache.selctionStrategy = this.selctionStrategy;
-            Statistic<SubKey> statistic = new Statistic<>(Objects.isNull(easyCache.expireAfterWriteTime), Objects.isNull(easyCache.expireAfterAccessTime));
-            easyCache.statistic = statistic;
+            easyCache.statistic = new Statistic<>(Objects.isNull(easyCache.expireAfterWriteTime), Objects.isNull(easyCache.expireAfterAccessTime));
             easyCache.id = UUID.randomUUID().toString();
             EasyCacheServer.getInstance().server(easyCache);
             return easyCache;

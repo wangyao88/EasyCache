@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 public class VolatileRandomSelctionyHandler extends SelctionStrategyHandler{
 
     @Override
-    protected <Key, Value> void doHandle(long selectionNum, EasyCache<Key, Value> easyCache) {
+    protected <Key, Value> List<Key> doHandle(long selectionNum, EasyCache<Key, Value> easyCache) {
         Map<Key, Statistic.ExpireRecorder<Key> > expireRecorderMap = easyCache.getStatistic().getExpireRecorderMap();
         Collection<Statistic.ExpireRecorder<Key>> expireRecorders = expireRecorderMap.values();
 
@@ -30,11 +30,8 @@ public class VolatileRandomSelctionyHandler extends SelctionStrategyHandler{
 
         Collections.shuffle(shuffledKeys);
 
-        List<Key> needSelectedKeys =
-                shuffledKeys.stream()
-                            .limit(selectionNum)
-                            .collect(Collectors.toList());
-
-        easyCache.invalidateAll(needSelectedKeys);
+        return shuffledKeys.stream()
+                           .limit(selectionNum)
+                           .collect(Collectors.toList());
     }
 }

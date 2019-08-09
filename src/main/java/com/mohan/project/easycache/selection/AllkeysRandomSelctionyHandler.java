@@ -2,6 +2,10 @@ package com.mohan.project.easycache.selection;
 
 import com.mohan.project.easycache.core.EasyCache;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * 缓存数据淘汰实现类
  * SelctionStrategyEnum.ALLKEYS_RANDOM
@@ -12,7 +16,9 @@ import com.mohan.project.easycache.core.EasyCache;
 public class AllkeysRandomSelctionyHandler extends SelctionStrategyHandler{
 
     @Override
-    protected <Key, Value> void doHandle(long selectionNum, EasyCache<Key, Value> easyCache) {
-
+    protected <Key, Value> List<Key> doHandle(long selectionNum, EasyCache<Key, Value> easyCache) {
+        List<Key> allKeys = easyCache.getAllKeys();
+        Collections.shuffle(allKeys);
+        return allKeys.stream().limit(selectionNum).collect(Collectors.toList());
     }
 }
