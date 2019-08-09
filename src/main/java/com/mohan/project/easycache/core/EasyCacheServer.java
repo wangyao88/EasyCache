@@ -117,33 +117,33 @@ public class EasyCacheServer<Key, Value> {
 
     private void doExpireAfterWrite(EasyCache<Key, Value> easyCache) {
         Statistic<Key> statistic = easyCache.getStatistic();
-        Map<Key, Statistic.ExpireRecorder> expireRecorderMap = statistic.getExpireRecorderMap();
+        Map<Key, Statistic.ExpireRecorder<Key>> expireRecorderMap = statistic.getExpireRecorderMap();
         Long expireAfterWriteTime = easyCache.getExpireAfterWriteTime();
         ChronoUnit expireAfterWriteChronoUnit = easyCache.getExpireAfterWriteChronoUnit();
-        doExpire(easyCache, expireRecorderMap, expireAfterWriteTime, expireAfterWriteChronoUnit);
+        doExpire(easyCache, expireRecorderMap, expireAfterWriteTime, expireAfterWriteChronoUnit, true);
     }
 
     private void doExpireAfterAccess(EasyCache<Key, Value> easyCache) {
         Statistic<Key> statistic = easyCache.getStatistic();
-        Map<Key, Statistic.ExpireRecorder> expireRecorderMap = statistic.getExpireRecorderMap();
+        Map<Key, Statistic.ExpireRecorder<Key>> expireRecorderMap = statistic.getExpireRecorderMap();
         Long expireAfterAccessTime = easyCache.getExpireAfterAccessTime();
         ChronoUnit expireAfterAccessChronoUnit = easyCache.getExpireAfterAccessChronoUnit();
-        doExpire(easyCache, expireRecorderMap, expireAfterAccessTime, expireAfterAccessChronoUnit);
+        doExpire(easyCache, expireRecorderMap, expireAfterAccessTime, expireAfterAccessChronoUnit, false);
     }
 
-    private void doExpire(EasyCache<Key, Value> easyCache, Map<Key, Statistic.ExpireRecorder> expireRecorderMap, Long expireTime, ChronoUnit expireChronoUnit) {
+    private void doExpire(EasyCache<Key, Value> easyCache, Map<Key, Statistic.ExpireRecorder<Key>> expireRecorderMap, Long expireTime, ChronoUnit expireChronoUnit, boolean isWrite) {
         Set<Key> keys = expireRecorderMap.keySet();
         for (Key key : keys) {
-            Statistic.ExpireRecorder expireRecorder = expireRecorderMap.get(key);
-            Long writeTime = expireRecorder.getWriteTime();
-            if(isExpired(writeTime, expireTime, expireChronoUnit)) {
+            Statistic.ExpireRecorder<Key> expireRecorder = expireRecorderMap.get(key);
+            Long time = isWrite ? expireRecorder.getWriteTime() : expireRecorder.getAccessTime();
+            if(isExpired(time, expireTime, expireChronoUnit)) {
                 easyCache.invalidate(key);
             }
         }
     }
 
-    private boolean isExpired(Long writeTime, Long expireTime, ChronoUnit expireChronoUnit) {
-        LocalDateTime writeLocalDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(writeTime), ZoneId.systemDefault());
+    private boolean isExpired(Long time, Long expireTime, ChronoUnit expireChronoUnit) {
+        LocalDateTime writeLocalDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault());
         LocalDateTime checkDateTime = writeLocalDateTime.plus(expireTime, expireChronoUnit);
         return checkDateTime.isBefore(LocalDateTime.now());
     }

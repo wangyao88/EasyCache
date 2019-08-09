@@ -9,10 +9,10 @@ import com.mohan.project.easycache.core.EasyCache;
  * @author mohan
  * @date 2018-08-06 23:23:30
  */
-public class AllkeysLruSelctionyHandler implements SelctionStrategyHandler{
+public class AllkeysLruSelctionyHandler extends SelctionStrategyHandler{
 
     @Override
-    public <Key, Value> void handle(EasyCache<Key, Value> easyCache) {
+    protected <Key, Value> void doHandle(long selectionNum, EasyCache<Key, Value> easyCache) {
 
     }
 }

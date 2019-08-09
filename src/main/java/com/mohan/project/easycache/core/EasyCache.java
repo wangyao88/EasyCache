@@ -1,7 +1,7 @@
 package com.mohan.project.easycache.core;
 
 import com.mohan.project.easycache.exception.GetValueByCallableException;
-import com.mohan.project.easycache.exception.ReachingMaxSizeException;
+import com.mohan.project.easycache.exception.ReachedMaxSizeException;
 import com.mohan.project.easycache.selection.SelctionStrategyEnum;
 import com.mohan.project.easycache.statistic.Statistic;
 
@@ -9,6 +9,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * EasyCache核心类
@@ -18,6 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2018-08-05 22:43:38
  */
 public class EasyCache<Key, Value> implements Cache<Key, Value> {
+
+    public static final String DEFAULT_NAME = "EasyCache";
 
     /**
      * EasyCache唯一ID
@@ -79,7 +82,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
             Value value = callable.call();
             cache.put(key, value);
             Optional<Value> valueOptional = Optional.of(value);
-            statistic.doGet(key, true);
+            statistic.doWirteAndGet(key);
             return valueOptional;
         } catch (Exception e) {
             throw new GetValueByCallableException(e);
@@ -111,7 +114,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     @Override
     public void put(Key key, Value value) {
         if(size() > getMaxSize()) {
-            throw new ReachingMaxSizeException();
+            throw new ReachedMaxSizeException();
         }
         cache.put(key, value);
         statistic.doWrite(key);
@@ -120,7 +123,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     @Override
     public void putAll(Map<? extends Key, ? extends Value> map) {
         if(size() > getMaxSize()) {
-            throw new ReachingMaxSizeException();
+            throw new ReachedMaxSizeException();
         }
         map.forEach((k, v) -> {
             cache.put(k, v);
@@ -188,6 +191,10 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
 
     public Statistic<Key> getStatistic() {
         return statistic;
+    }
+
+    public List<Key> getAllKeys() {
+        return cache.keySet().stream().collect(Collectors.toList());
     }
 
     /**
