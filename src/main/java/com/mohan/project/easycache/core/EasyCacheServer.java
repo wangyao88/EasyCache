@@ -150,10 +150,10 @@ public class EasyCacheServer<Key, Value> {
 
     private void doSelection() {
         easyCacheMap.forEach((severKey, easyCache) -> {
-            if(easyCache.size() >= easyCache.getMaxSize()) {
+            if(easyCache.size() >= easyCache.getMaxSize()*0.75) {
+                easyCache.getStatistic().doEviction();
                 SelctionStrategyManager.doSelection(easyCache);
             }
         });
     }
-
 }

@@ -1,5 +1,10 @@
 package com.mohan.project.easycache.exception;
 
+/**
+ * cache到达最大允许值异常
+ * @author mohan
+ * @date 2018-08-05 22:43:38
+ */
 public class ReachedMaxSizeException extends RuntimeException{
 
     private static final String DEFAULT_MESSAGE = "EasyCache混存数量达到maxSize，无法继续添加数据！可通过调用invalidate或invalidateAll方法显式清除数据";

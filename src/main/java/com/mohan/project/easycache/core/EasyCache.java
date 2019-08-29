@@ -82,15 +82,20 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
             statistic.doGet(key, true);
             return valueOptional;
         }
+        Value value = null;
         try {
-            Value value = callable.call();
-            cache.put(key, value);
-            Optional<Value> valueOptional = Optional.of(value);
-            statistic.doWirteAndGet(key);
-            return valueOptional;
+            long start = System.currentTimeMillis();
+            value = callable.call();
+            long end = System.currentTimeMillis();
+            statistic.doCallSuccessfully(end-start);
         } catch (Exception e) {
+            statistic.doCallFail();
             throw new GetValueByCallableException(e);
         }
+        cache.put(key, value);
+        Optional<Value> valueOptional = Optional.of(value);
+        statistic.doWirteAndGet(key);
+        return valueOptional;
     }
 
     @Override
@@ -104,7 +109,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     }
 
     @Override
-    public Map<Key, Value> getAll(Iterable<Key> keys) {
+    public Optional<Map<Key, Value>> getAll(Iterable<Key> keys) {
         Map<Key, Value> result = new HashMap<>();
         for (Key key : keys) {
             if(cache.containsKey(key)) {
@@ -112,7 +117,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
                 result.put(key, cache.get(key));
             }
         }
-        return result;
+        return result.isEmpty() ? Optional.empty() : Optional.of(result);
     }
 
     @Override
@@ -161,8 +166,12 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     }
 
     @Override
-    public Statistic statistic() {
-        return statistic;
+    public String statistic() {
+        return statistic.getCurrentStatisticInfo();
+    }
+
+    public void showStatistic() {
+        System.out.println(statistic());
     }
 
     public String getId() {

@@ -1,9 +1,24 @@
 package com.mohan.project.easycache.statistic;
 
+import com.mohan.project.easycache.utils.Constant;
+import com.mohan.project.easycache.utils.FileUtils;
+import org.apache.lucene.util.RamUsageEstimator;
+
+import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+
+/**
+ * EasyCache统计信息类
+ * @param <Key> 缓存key
+ * @author mohan
+ * @date 2018-08-05 22:43:38
+ */
 public class Statistic<Key> {
 
     private long hitCount;
@@ -25,6 +40,7 @@ public class Statistic<Key> {
 
     public void doGet(Key key, boolean present) {
         if(present) {
+            hitCount++;
             if(allKeysUsedCounter.containsKey(key)) {
                 Counter<Key> counter = allKeysUsedCounter.get(key);
                 counter.setAccessTime(System.currentTimeMillis());
@@ -33,21 +49,36 @@ public class Statistic<Key> {
                 allKeysUsedCounter.put(key, new Counter<>(key, System.currentTimeMillis(), 1));
             }
 
-        }
-        if(present && enableExpireAfterAccess) {
-            long now = System.currentTimeMillis();
-            if(expireRecorderMap.containsKey(key)) {
-               ExpireRecorder<Key> expireRecorder = this.expireRecorderMap.get(key);
-               expireRecorder.setAccessTime(now);
-               expireRecorder.setUsedNum(1);
-            }else {
-               ExpireRecorder<Key> expireRecorder = new ExpireRecorder<>();
-               expireRecorder.setAccessTime(now);
-               expireRecorder.setKey(key);
-               expireRecorder.increateUsedNum();
-               expireRecorderMap.put(key, expireRecorder);
+            if(enableExpireAfterAccess) {
+                long now = System.currentTimeMillis();
+                if(expireRecorderMap.containsKey(key)) {
+                    ExpireRecorder<Key> expireRecorder = this.expireRecorderMap.get(key);
+                    expireRecorder.setAccessTime(now);
+                    expireRecorder.setUsedNum(1);
+                }else {
+                    ExpireRecorder<Key> expireRecorder = new ExpireRecorder<>();
+                    expireRecorder.setAccessTime(now);
+                    expireRecorder.setKey(key);
+                    expireRecorder.increateUsedNum();
+                    expireRecorderMap.put(key, expireRecorder);
+                }
             }
+        }else {
+            missCount++;
         }
+    }
+
+    public void doCallSuccessfully(long loadTime) {
+        loadSuccessCount++;
+        totalLoadTime += loadTime;
+    }
+
+    public void doCallFail() {
+        loadExceptionCount++;
+    }
+
+    public void doEviction() {
+        evictionCount++;
     }
 
     public void doWrite(Key key) {
@@ -99,6 +130,36 @@ public class Statistic<Key> {
 
     public Boolean getEnableExpireAfterAccess() {
         return enableExpireAfterAccess;
+    }
+
+    public String getCurrentStatisticInfo() {
+        StringBuilder info = new StringBuilder();
+        info.append(getBanner());
+        info.append("基本信息").append(Constant.LF);
+        info.append("命中次数：").append(hitCount).append(Constant.LF)
+            .append("未命中次数：").append(missCount).append(Constant.LF)
+            .append("成功加载次数：").append(loadSuccessCount).append(Constant.LF)
+            .append("未成功加载次数：").append(loadExceptionCount).append(Constant.LF)
+            .append("加载总耗时：").append(totalLoadTime).append(Constant.LF)
+            .append("淘汰数据次数：").append(evictionCount).append(Constant.LF);
+        info.append("---------------------------------------------").append(Constant.LF);
+        info.append("存储信息").append(Constant.LF);
+        info.append("缓存数量：").append(allKeysUsedCounter.size()).append(Constant.LF);
+        String sizeInRam = RamUsageEstimator.humanReadableUnits(RamUsageEstimator.shallowSizeOf(allKeysUsedCounter.values()));
+        info.append("缓存大小：").append(sizeInRam).append(Constant.LF);
+//        if(getEnableExpireAfterWrite() || getEnableExpireAfterAccess()) {
+//            info.append("---------------------------------------------").append(Constant.LF);
+//            info.append("过期信息").append(Constant.LF);
+//
+//        }
+        return info.toString();
+    }
+
+    private String getBanner() {
+        URL resource = Statistic.class.getClassLoader().getResource("");
+        Path path = Paths.get(resource.getPath(), "banner.txt");
+        Optional<String> content = FileUtils.getContent(path);
+        return content.orElse("EasyCache");
     }
 
     public static class ExpireRecorder<Key> {

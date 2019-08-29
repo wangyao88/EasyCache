@@ -45,7 +45,7 @@ public interface Cache<Key, Value> {
      * @param keys 缓存中的key集合
      * @return keys对应缓存中的value集合
      */
-    Map<Key, Value> getAll(Iterable<Key> keys);
+    Optional<Map<Key, Value>> getAll(Iterable<Key> keys);
 
     /**
      * 增加缓存
@@ -85,7 +85,7 @@ public interface Cache<Key, Value> {
 
     /**
      * 获取缓存统计信息
-     * @return
+     * @return 缓存统计信息
      */
-    Statistic statistic();
+    String statistic();
 }
