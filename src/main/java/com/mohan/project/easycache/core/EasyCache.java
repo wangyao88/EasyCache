@@ -1,5 +1,7 @@
 package com.mohan.project.easycache.core;
 
+import com.mohan.project.easycache.endurance.DefaultEndurancer;
+import com.mohan.project.easycache.endurance.Endurancer;
 import com.mohan.project.easycache.exception.GetValueByCallableException;
 import com.mohan.project.easycache.exception.ReachedMaxSizeException;
 import com.mohan.project.easycache.selection.SelctionStrategyEnum;
@@ -56,6 +58,16 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
      * 数据淘汰策略
      */
     private SelctionStrategyEnum selctionStrategy = SelctionStrategyEnum.VOLATILE_LRU;
+
+    /**
+     * 持久器
+     */
+    private Endurancer<Key, Value> endurancer;
+
+    /**
+     * 是否开启持久化
+     */
+    private boolean enableEndurancer;
 
     /**
      * 缓存数据统计信息
@@ -249,6 +261,16 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
          */
         private SelctionStrategyEnum selctionStrategy = SelctionStrategyEnum.VOLATILE_LRU;
 
+        /**
+         * 持久器
+         */
+        private Endurancer<Key, Value> endurancer;
+
+        /**
+         * 是否开启持久化
+         */
+        private boolean enableEndurancer;
+
         public static EasyCacheBuilder<Object, Object> newBuilder() {
             return new EasyCacheBuilder<Object, Object>();
         }
@@ -278,8 +300,13 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
             return this;
         }
 
-        public EasyCacheBuilder selctionStrategy(SelctionStrategyEnum selctionStrategy) {
+        public EasyCacheBuilder<Key, Value> selctionStrategy(SelctionStrategyEnum selctionStrategy) {
             this.selctionStrategy = selctionStrategy;
+            return this;
+        }
+
+        public EasyCacheBuilder<Key, Value> endurancer(Endurancer<Key, Value> endurancer, boolean enableEndurancer) {
+            this.enableEndurancer = enableEndurancer;
             return this;
         }
 
@@ -293,6 +320,10 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
             easyCache.selctionStrategy = this.selctionStrategy;
             easyCache.statistic = new Statistic<>(Objects.isNull(easyCache.expireAfterWriteTime), Objects.isNull(easyCache.expireAfterAccessTime));
             easyCache.id = UUID.randomUUID().toString();
+            easyCache.enableEndurancer = this.enableEndurancer;
+            if(this.enableEndurancer) {
+                easyCache.endurancer = Objects.isNull(this.maxSize) ? new DefaultEndurancer<>() : (Endurancer<SubKey, SubValue>) this.endurancer;
+            }
             EasyCacheServer.getInstance().server(easyCache);
             return easyCache;
         }
