@@ -1,15 +1,10 @@
 package com.mohan.project.easycache.statistic;
 
-import com.mohan.project.easycache.utils.Constant;
-import com.mohan.project.easycache.utils.FileUtils;
+import com.mohan.project.easytools.file.FileTools;
 import org.apache.lucene.util.RamUsageEstimator;
 
-import java.net.URL;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -134,32 +129,25 @@ public class Statistic<Key> {
 
     public String getCurrentStatisticInfo() {
         StringBuilder info = new StringBuilder();
-        info.append(getBanner());
-        info.append("基本信息").append(Constant.LF);
-        info.append("命中次数：").append(hitCount).append(Constant.LF)
-            .append("未命中次数：").append(missCount).append(Constant.LF)
-            .append("成功加载次数：").append(loadSuccessCount).append(Constant.LF)
-            .append("未成功加载次数：").append(loadExceptionCount).append(Constant.LF)
-            .append("加载总耗时：").append(totalLoadTime).append(Constant.LF)
-            .append("淘汰数据次数：").append(evictionCount).append(Constant.LF);
-        info.append("---------------------------------------------").append(Constant.LF);
-        info.append("存储信息").append(Constant.LF);
-        info.append("缓存数量：").append(allKeysUsedCounter.size()).append(Constant.LF);
+        info.append(FileTools.getBanner());
+        info.append("基本信息").append(FileTools.LF);
+        info.append("命中次数：").append(hitCount).append(FileTools.LF)
+            .append("未命中次数：").append(missCount).append(FileTools.LF)
+            .append("成功加载次数：").append(loadSuccessCount).append(FileTools.LF)
+            .append("未成功加载次数：").append(loadExceptionCount).append(FileTools.LF)
+            .append("加载总耗时：").append(totalLoadTime).append(FileTools.LF)
+            .append("淘汰数据次数：").append(evictionCount).append(FileTools.LF);
+        info.append("---------------------------------------------").append(FileTools.LF);
+        info.append("存储信息").append(FileTools.LF);
+        info.append("缓存数量：").append(allKeysUsedCounter.size()).append(FileTools.LF);
         String sizeInRam = RamUsageEstimator.humanReadableUnits(RamUsageEstimator.shallowSizeOf(allKeysUsedCounter.values()));
-        info.append("缓存大小：").append(sizeInRam).append(Constant.LF);
+        info.append("缓存大小：").append(sizeInRam).append(FileTools.LF);
 //        if(getEnableExpireAfterWrite() || getEnableExpireAfterAccess()) {
 //            info.append("---------------------------------------------").append(Constant.LF);
 //            info.append("过期信息").append(Constant.LF);
 //
 //        }
         return info.toString();
-    }
-
-    private String getBanner() {
-        URL resource = Statistic.class.getClassLoader().getResource("");
-        Path path = Paths.get(resource.getPath(), "banner.txt");
-        Optional<String> content = FileUtils.getContent(path);
-        return content.orElse("EasyCache");
     }
 
     public static class ExpireRecorder<Key> {
