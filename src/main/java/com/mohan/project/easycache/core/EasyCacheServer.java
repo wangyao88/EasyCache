@@ -1,7 +1,7 @@
 package com.mohan.project.easycache.core;
 
-import com.mohan.project.easycache.selection.SelctionStrategyEnum;
 import com.mohan.project.easycache.selection.SelctionStrategyManager;
+import com.mohan.project.easycache.statistic.EasyCacheDisruptor;
 import com.mohan.project.easycache.statistic.Statistic;
 
 import java.time.Instant;
@@ -33,6 +33,7 @@ public class EasyCacheServer<Key, Value> {
         THREAD_POOL_EXECUTOR = Executors.newScheduledThreadPool(10);
         THREAD_POOL_EXECUTOR.scheduleAtFixedRate(this::process, 0, 1, TimeUnit.SECONDS);
         THREAD_POOL_EXECUTOR.scheduleAtFixedRate(this::doSelection, 0, 1, TimeUnit.SECONDS);
+        EasyCacheDisruptor.<Key>getInstance().start();
     }
 
     private static class Singleton {

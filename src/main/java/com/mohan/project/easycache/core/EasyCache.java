@@ -1,10 +1,9 @@
 package com.mohan.project.easycache.core;
 
-import com.mohan.project.easycache.endurance.DefaultEndurancer;
-import com.mohan.project.easycache.endurance.Endurancer;
 import com.mohan.project.easycache.exception.GetValueByCallableException;
 import com.mohan.project.easycache.exception.ReachedMaxSizeException;
 import com.mohan.project.easycache.selection.SelctionStrategyEnum;
+import com.mohan.project.easycache.statistic.EasyCacheDisruptor;
 import com.mohan.project.easycache.statistic.Statistic;
 
 import java.time.temporal.ChronoUnit;
@@ -60,16 +59,6 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     private SelctionStrategyEnum selctionStrategy = SelctionStrategyEnum.VOLATILE_LRU;
 
     /**
-     * 持久器
-     */
-    private Endurancer<Key, Value> endurancer;
-
-    /**
-     * 是否开启持久化
-     */
-    private boolean enableEndurancer;
-
-    /**
      * 缓存数据统计信息
      */
     private Statistic<Key> statistic;
@@ -83,7 +72,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     @Override
     public Optional<Value> get(Key key) {
         Optional<Value> valueOptional = Optional.ofNullable(cache.get(key));
-        statistic.doGet(key, valueOptional.isPresent());
+        EasyCacheDisruptor.<Key>getInstance().publishGetEvent(statistic, key, valueOptional.isPresent());
         return valueOptional;
     }
 
@@ -91,7 +80,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     public Optional<Value> get(Key key, Callable<? extends Value> callable) throws GetValueByCallableException {
         if(cache.containsKey(key)) {
             Optional<Value> valueOptional = Optional.of(cache.get(key));
-            statistic.doGet(key, true);
+            EasyCacheDisruptor.<Key>getInstance().publishGetEvent(statistic, key, Boolean.TRUE);
             return valueOptional;
         }
         Value value = null;
@@ -99,14 +88,14 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
             long start = System.currentTimeMillis();
             value = callable.call();
             long end = System.currentTimeMillis();
-            statistic.doCallSuccessfully(end-start);
+            EasyCacheDisruptor.<Key>getInstance().publishCallSuccessfullyEvent(statistic, end-start);
         } catch (Exception e) {
-            statistic.doCallFail();
+            EasyCacheDisruptor.<Key>getInstance().publishCallFailEvent(statistic);
             throw new GetValueByCallableException(e);
         }
         cache.put(key, value);
         Optional<Value> valueOptional = Optional.of(value);
-        statistic.doWirteAndGet(key);
+        statistic.doPutAndGet(key);
         return valueOptional;
     }
 
@@ -114,7 +103,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
     public Optional<Value> getIfPresent(Key key) {
         if(cache.containsKey(key)) {
             Optional<Value> valueOptional = Optional.of(cache.get(key));
-            statistic.doGet(key, true);
+            EasyCacheDisruptor.<Key>getInstance().publishGetEvent(statistic, key, Boolean.TRUE);
             return valueOptional;
         }
         return Optional.empty();
@@ -125,7 +114,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
         Map<Key, Value> result = new HashMap<>();
         for (Key key : keys) {
             if(cache.containsKey(key)) {
-                statistic.doGet(key, true);
+                EasyCacheDisruptor.<Key>getInstance().publishGetEvent(statistic, key, Boolean.TRUE);
                 result.put(key, cache.get(key));
             }
         }
@@ -138,7 +127,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
             throw new ReachedMaxSizeException();
         }
         cache.put(key, value);
-        statistic.doWrite(key);
+        EasyCacheDisruptor.<Key>getInstance().publishPutEvent(statistic, key);
     }
 
     @Override
@@ -148,7 +137,7 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
         }
         map.forEach((k, v) -> {
             cache.put(k, v);
-            statistic.doWrite(k);
+            EasyCacheDisruptor.<Key>getInstance().publishPutEvent(statistic, k);
         });
     }
 
@@ -261,16 +250,6 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
          */
         private SelctionStrategyEnum selctionStrategy = SelctionStrategyEnum.VOLATILE_LRU;
 
-        /**
-         * 持久器
-         */
-        private Endurancer<Key, Value> endurancer;
-
-        /**
-         * 是否开启持久化
-         */
-        private boolean enableEndurancer;
-
         public static EasyCacheBuilder<Object, Object> newBuilder() {
             return new EasyCacheBuilder<Object, Object>();
         }
@@ -305,11 +284,6 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
             return this;
         }
 
-        public EasyCacheBuilder<Key, Value> endurancer(Endurancer<Key, Value> endurancer, boolean enableEndurancer) {
-            this.enableEndurancer = enableEndurancer;
-            return this;
-        }
-
         public <SubKey extends Key, SubValue extends Value> EasyCache<SubKey, SubValue> build() {
             EasyCache<SubKey, SubValue> easyCache = new EasyCache<>();
             easyCache.expireAfterWriteTime = this.expireAfterWriteTime;
@@ -320,10 +294,6 @@ public class EasyCache<Key, Value> implements Cache<Key, Value> {
             easyCache.selctionStrategy = this.selctionStrategy;
             easyCache.statistic = new Statistic<>(Objects.isNull(easyCache.expireAfterWriteTime), Objects.isNull(easyCache.expireAfterAccessTime));
             easyCache.id = UUID.randomUUID().toString();
-            easyCache.enableEndurancer = this.enableEndurancer;
-            if(this.enableEndurancer) {
-                easyCache.endurancer = Objects.isNull(this.maxSize) ? new DefaultEndurancer<>() : (Endurancer<SubKey, SubValue>) this.endurancer;
-            }
             EasyCacheServer.getInstance().server(easyCache);
             return easyCache;
         }

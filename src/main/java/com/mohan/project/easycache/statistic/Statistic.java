@@ -76,7 +76,7 @@ public class Statistic<Key> {
         evictionCount++;
     }
 
-    public void doWrite(Key key) {
+    public void doPut(Key key) {
         allKeysUsedCounter.put(key, new Counter<>(key, System.currentTimeMillis(), 1));
         if(enableExpireAfterWrite) {
             long now = System.currentTimeMillis();
@@ -94,12 +94,12 @@ public class Statistic<Key> {
         }
     }
 
-    public void doWirteAndGet(Key key) {
+    public void doPutAndGet(Key key) {
         if(enableExpireAfterWrite) {
-            doWrite(key);
+            EasyCacheDisruptor.<Key>getInstance().publishPutEvent(this, key);
         }
         if(enableExpireAfterAccess) {
-            doGet(key, enableExpireAfterWrite);
+            EasyCacheDisruptor.<Key>getInstance().publishGetEvent(this, key, enableExpireAfterWrite);
         }
     }
 
@@ -128,8 +128,9 @@ public class Statistic<Key> {
     }
 
     public String getCurrentStatisticInfo() {
+        System.out.println(this.hitCount+this.missCount);
         StringBuilder info = new StringBuilder();
-        info.append(FileTools.getBanner());
+//        info.append(FileTools.getBanner());
         info.append("基本信息").append(FileTools.LF);
         info.append("命中次数：").append(hitCount).append(FileTools.LF)
             .append("未命中次数：").append(missCount).append(FileTools.LF)
