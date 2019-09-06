@@ -46,22 +46,22 @@ public class EasyCacheDisruptor<Key> {
     }
 
     public void publishCallFailEvent(Statistic<Key> statistic) {
-        this.ringBuffer.publishEvent(new CallFailEventTranslator(), statistic);
+        this.ringBuffer.publishEvent(new CallFailEventTranslator<>(), statistic);
     }
 
     public void publishCallSuccessfullyEvent(Statistic<Key> statistic, Long loadTime) {
-        this.ringBuffer.publishEvent(new CallSuccessfullyEventTranslator(), statistic, loadTime);
+        this.ringBuffer.publishEvent(new CallSuccessfullyEventTranslator<>(), statistic, loadTime);
     }
 
     public void publishEvictionEvent(Statistic<Key> statistic) {
-        this.ringBuffer.publishEvent(new EvictionEventTranslator(), statistic);
+        this.ringBuffer.publishEvent(new EvictionEventTranslator<>(), statistic);
     }
 
     public void publishGetEvent(Statistic<Key> statistic, Key key, boolean present) {
-        this.ringBuffer.publishEvent(new GetEventTranslator(), statistic, key, present);
+        this.ringBuffer.publishEvent(new GetEventTranslator<>(), statistic, key, present);
     }
 
     public void publishPutEvent(Statistic<Key> statistic, Key key) {
-        this.ringBuffer.publishEvent(new PutEventTranslator(), statistic, key);
+        this.ringBuffer.publishEvent(new PutEventTranslator<>(), statistic, key);
     }
 }
