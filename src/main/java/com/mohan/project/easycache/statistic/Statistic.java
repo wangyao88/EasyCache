@@ -128,9 +128,8 @@ public class Statistic<Key> {
     }
 
     public String getCurrentStatisticInfo() {
-        System.out.println(this.hitCount+this.missCount);
         StringBuilder info = new StringBuilder();
-//        info.append(FileTools.getBanner());
+        info.append(FileTools.getBanner());
         info.append("基本信息").append(FileTools.LF);
         info.append("命中次数：").append(hitCount).append(FileTools.LF)
             .append("未命中次数：").append(missCount).append(FileTools.LF)

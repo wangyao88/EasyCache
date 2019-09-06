@@ -3,30 +3,29 @@ package com.mohan.project.easycache;
 import com.mohan.project.easycache.core.EasyCache;
 
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class Test {
 
     public static void main(String[] args) throws InterruptedException {
-        EasyCache<String, String> easyCache = EasyCache.EasyCacheBuilder.<String, String>newBuilder().maxSize(200000L).build();
-        for (int i = 0; i < 20; i++) {
+        final EasyCache<String, String> easyCache = EasyCache.EasyCacheBuilder.<String, String>newBuilder().maxSize(2000000L).build();
+        for (int i = 0; i < 2000000; i++) {
             easyCache.put(i+"", i+"");
         }
-        Random random = new Random();
+        final Random random = new Random();
 
-        int num = 100;
-        CountDownLatch countDownLatch = new CountDownLatch(num);
+        int num = 2;
+        final CountDownLatch countDownLatch = new CountDownLatch(num);
         for (int i = 0; i < num; i++) {
-            CompletableFuture.runAsync(() -> {
+            new Thread(() -> {
                 String key = random.nextInt(40) + "";
                 easyCache.get(key);
                 countDownLatch.countDown();
-            });
+            }).start();
         }
         countDownLatch.await();
-        TimeUnit.SECONDS.sleep(6);
+        TimeUnit.SECONDS.sleep(1);
         easyCache.showStatistic();
     }
 }

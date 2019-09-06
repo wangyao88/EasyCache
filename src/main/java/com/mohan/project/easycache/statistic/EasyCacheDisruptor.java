@@ -39,7 +39,7 @@ public class EasyCacheDisruptor<Key> {
         EventFactory<? extends StatisticEvent<Key>> eventFactory = new BaseEventFactory<>();
         //环形队列长度，必须是2的N次方
         int bufferSize = 1024 * 1024;
-        Disruptor<? extends StatisticEvent<Key>> disruptor = new Disruptor<>(eventFactory, bufferSize, Executors.defaultThreadFactory(), ProducerType.SINGLE, new BlockingWaitStrategy());
+        Disruptor<? extends StatisticEvent<Key>> disruptor = new Disruptor<>(eventFactory, bufferSize, Executors.defaultThreadFactory(), ProducerType.MULTI, new BlockingWaitStrategy());
         disruptor.handleEventsWith(new BaseEventHandler<>());
         disruptor.start();
         ringBuffer = disruptor.getRingBuffer();
